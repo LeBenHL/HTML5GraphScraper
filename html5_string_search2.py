@@ -1,7 +1,9 @@
 from collections import namedtuple
+import threading
+import time
 
+from pygraph.algorithms.searching import depth_first_search
 from html_graph_scraper import HTML5Graph
-from pygraph.classes.digraph import digraph
 
 Node = namedtuple('Node', ['state', 'path'], verbose=False)
 class Queue:
@@ -9,10 +11,10 @@ class Queue:
       self.list = []
 
   def push(self,item):
-      self.list.insert(0,item)
+      self.list.append(item)
 
   def pop(self):
-      return self.list.pop()
+      return self.list.pop(0)
 
   def isEmpty(self):
       return len(self.list) == 0
@@ -21,38 +23,133 @@ class Search:
 
   @staticmethod
   def breadthFirstSearch(problem):
-    return Search._generalSearch(problem, Queue());
+    return Search.MultiThreadGeneralSearch(problem, Queue(), num_threads=6);
+    #return Search.GeneralSearch(problem, Queue());
   
-  @staticmethod
-  def _generalSearch(problem, fringe):    
-    closedSet = set()
-    moveList = []
-    cost = 0
-    fringe.push(problem.getStartState())
-    while not fringe.isEmpty():
-      node = fringe.pop()
-      if (problem.isGoalState(node)):
-        path = list(node.path)
-        path.reverse()
-        print path
-      else:
-        pass
-      state_tuple = tuple(node.state)
-      if state_tuple not in closedSet:
-          closedSet.add(state_tuple)
-          successors = problem.getSuccessors(node)
-          for successor in successors:
-              tuple_successor = tuple(successor.state)
-              if tuple_successor not in closedSet:
-                  fringe.push(successor)
-    return node
+  class GeneralSearch:
+
+    def __init__(self, problem, fringe):
+      self.problem = problem
+      self.fringe = fringe   
+      self.closedSet = set()
+      self.fringe.push(self.problem.getStartState())
+
+      self.beginSearch()
+
+    def beginSearch(self):
+      while not self.fringe.isEmpty():
+        node = self.fringe.pop()
+        if (self.problem.isGoalState(node)):
+          path = list(node.path)
+          path.reverse()
+          print path
+        else:
+          pass
+        state_tuple = node.state
+        if state_tuple not in self.closedSet:
+            self.closedSet.add(state_tuple)
+            successors = self.problem.getSuccessors(node)
+            for successor in successors:
+                tuple_successor = successor.state
+                if tuple_successor not in self.closedSet:
+                    self.fringe.push(successor)
+      return node
+
+  class BFSThread(threading.Thread):
+
+    def __init__(self, name, func, print_thread):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.func = func
+        self.print_thread = print_thread
+        self.expanding = True
+
+    def run(self):
+        print "Starting " + self.name
+        self.func()
+        print "Exiting " + self.name
+
+  class PrintThread(threading.Thread):
+
+    def __init__(self, name):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.queue = Queue()
+
+    def run(self):
+        print "Starting " + self.name
+        self.processQueue()
+        print "Exiting " + self.name
+
+    def processQueue(self):
+      while True:
+        time.sleep(5)
+        if not self.queue.isEmpty():
+          item = self.queue.pop()
+          print item
+
+  class MultiThreadGeneralSearch:
+
+    def __init__(self, problem, fringe, num_threads=1):
+      self.problem = problem
+      self.fringe = fringe   
+      self.closedSet = set()
+      self.fringe.push(self.problem.getStartState())
+
+      #Threading Stuff
+      print_thread = Search.PrintThread("PrintThread")
+      print_thread.dameon = True
+      print_thread.start()
+      self.num_threads = num_threads
+
+      self.threads = []
+      #Create Threads
+      for i in range(self.num_threads):
+        self.threads.append(Search.BFSThread("Thread-%d" % i, self.beginSearch, print_thread))
+
+      for thread in self.threads:
+        thread.dameon = True
+        thread.start()
+
+    def beginSearch(self):
+      while self.threadsStillExpanding():
+        while not self.fringe.isEmpty():
+          threading.currentThread().expanding = True
+          node = self.fringePop()
+          if (self.problem.isGoalState(node)):
+            path = list(node.path)
+            path.reverse()
+            threading.currentThread().print_thread.queue.push(path)
+          else:
+            #path = list(node.path)
+            #path.reverse()
+            #threading.currentThread().print_thread.queue.push(path)
+            pass
+          state_tuple = node.state
+          if state_tuple not in self.closedSet:
+              self.closedStateAdd(state_tuple)
+              successors = self.problem.getSuccessors(node)
+              for successor in successors:
+                  tuple_successor = successor.state
+                  if tuple_successor not in self.closedSet:
+                      self.fringePush(successor)
+        threading.currentThread().expanding = False
+
+    def fringePop(self):
+      return self.fringe.pop()
+
+    def fringePush(self, node):
+      self.fringe.push(node)
+
+    def closedStateAdd(self, state_tuple):
+      self.closedSet.add(state_tuple)
+
+    def threadsStillExpanding(self):
+      return any([thread.expanding for thread in self.threads])
+
 
 class IllegalCharacterException(Exception):
   pass
-
-class IllegalActionException(Exception):
-  pass
-
 
 class CommonStringSearchDict(dict):
 
@@ -83,7 +180,7 @@ class CommonStringSearchProblem:
       self.anything_else_characters[node] = self.html_charset.difference(actions)
 
   def getStartState(self):
-    return Node(set([self.end_state]), [])
+    return Node(frozenset([self.end_state]), [])
 
   def isGoalState(self, node):
     return self.start_nodes.issubset(node.state)
@@ -107,7 +204,7 @@ class CommonStringSearchProblem:
         if self._contains(action, actions):
           new_state.append(neighbor)
 
-    return Node(set(new_state), node.path + [action])
+    return Node(frozenset(new_state), node.path + [action])
 
   def _contains(self, action, actions):
     return action in actions
@@ -137,8 +234,10 @@ class CommonStringSearchProblem:
 
 if __name__ == "__main__":
   graph = HTML5Graph(populate=True)
-  reachable_nodes = [("textarea", "rcdataState")]
+  reachable_nodes = depth_first_search(graph, ("asciiLetters", "dataState"))[1]
+  print reachable_nodes
+  #reachable_nodes = [("script", "rawtextState")]
   end_state = ("asciiLetters", "dataState")
   problem = CommonStringSearchProblem(graph, reachable_nodes, end_state)
-  Search.breadthFirstSearch(problem).path
+  Search.breadthFirstSearch(problem)
 
