@@ -84,7 +84,7 @@ class Search:
     def processQueue(self):
       while True:
         time.sleep(5)
-        if not self.queue.isEmpty():
+        while not self.queue.isEmpty():
           item = self.queue.pop()
           print item
 

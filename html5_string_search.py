@@ -1,17 +1,80 @@
+import threading
+import time
+
 from html_graph_scraper import HTML5Graph
+
+class Queue:
+  def __init__(self):
+      self.list = []
+
+  def push(self,item):
+      self.list.append(item)
+
+  def pop(self):
+      return self.list.pop(0)
+
+  def isEmpty(self):
+      return len(self.list) == 0
 
 class HTML5StringSearch:
 
-  def __init__(self, start_states, end_state):
+  class PrintThread(threading.Thread):
+
+    def __init__(self, name):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.queue = Queue()
+
+    def run(self):
+        print "Starting " + self.name
+        self.processQueue()
+        print "Exiting " + self.name
+
+    def processQueue(self):
+      while True:
+        time.sleep(5)
+        while not self.queue.isEmpty():
+          item = self.queue.pop()
+          print item
+
+  class SearchThread(threading.Thread):
+
+    def __init__(self, name, func, print_thread):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.func = func
+        self.print_thread = print_thread
+        self.searching = True
+
+    def run(self):
+        print "Starting " + self.name
+        self.func()
+        print "Exiting " + self.name
+
+  def __init__(self, start_states, end_state, num_threads=1):
     self.start_states = start_states
     self.end_state = end_state
-    self.graph = HTML5Graph()
+    self.graph = HTML5Graph(populate=True)
     self.html5_chars = self.allChars()
+    self.string_queue = [[char] for char in self.html5_chars]
     
     self.populateAnythingElseCharDict()
     self.populateStartStateAndCharDict()
 
-    self.findStrings()
+    #Threading Stuff
+    print_thread = HTML5StringSearch.PrintThread("PrintThread")
+    print_thread.dameon = True
+    print_thread.start()
+    self.num_threads = num_threads
+
+    self.threads = []
+    #Create Threads
+    for i in range(self.num_threads):
+      self.threads.append(HTML5StringSearch.SearchThread("Thread-%d" % i, self.findStrings, print_thread))
+
+    for thread in self.threads:
+      thread.dameon = True
+      thread.start()
 
   def populateAnythingElseCharDict(self):
     self.anything_else_chars_dict = dict()
@@ -35,19 +98,20 @@ class HTML5StringSearch:
       self.start_state_and_char_dict[node] = char_dict
 
   def findStrings(self):
-    string_queue = [[char] for char in self.html5_chars]
-    #start_string = ["<", "/", "textarea"]
-    #string_queue = [start_string]
-    while string_queue:
-      html5_string = string_queue.pop(0)
-      end_state = self.end_state_from_parse(html5_string)
-      print html5_string
+    while self.threadsStillSearching():
+      while self.string_queue:
+        threading.currentThread().searching = True
+        html5_string = self.string_queue.pop(0)
+        end_state = self.end_state_from_parse(html5_string)
+        #threading.currentThread().print_thread.queue.push(threading.currentThread().name + " " + str(html5_string))
 
-      if end_state and end_state == self.end_state:
-        return
+        if end_state and end_state == self.end_state:
+          threading.currentThread().print_thread.queue.push(html5_string)
+          return
 
-      for char in self.html5_chars:
-        string_queue.append(html5_string + [char])
+        for char in self.html5_chars:
+          self.string_queue.append(html5_string + [char])
+      threading.currentThread().searching = False
 
   def end_state_from_parse(self, html5_string):
     end_state = None
@@ -79,6 +143,9 @@ class HTML5StringSearch:
 
     return set(chars).difference(set(["Anything Else"]))
 
+  def threadsStillSearching(self):
+    return any([thread.searching for thread in self.threads])
+
 if __name__ == "__main__":
-  searcher = HTML5StringSearch([("textarea", "rcdataState")], ("asciiLetters", "dataState"))
+  searcher = HTML5StringSearch([("textarea", "rcdataState")], ("asciiLetters", "dataState"), num_threads=2)
 
