@@ -42,7 +42,7 @@ class Search:
         if (self.problem.isGoalState(node)):
           path = list(node.path)
           path.reverse()
-          print path
+          print(path)
         else:
           pass
         state_tuple = node.state
@@ -65,9 +65,9 @@ class Search:
         self.expanding = True
 
     def run(self):
-        print "Starting " + self.name
+        print("Starting " + self.name)
         self.func()
-        print "Exiting " + self.name
+        print("Exiting " + self.name)
 
   class PrintThread(threading.Thread):
 
@@ -77,16 +77,16 @@ class Search:
         self.queue = Queue()
 
     def run(self):
-        print "Starting " + self.name
+        print("Starting " + self.name)
         self.processQueue()
-        print "Exiting " + self.name
+        print("Exiting " + self.name)
 
     def processQueue(self):
       while True:
         time.sleep(5)
         while not self.queue.isEmpty():
           item = self.queue.pop()
-          print item
+          print(item)
 
   class MultiThreadGeneralSearch:
 
@@ -112,6 +112,7 @@ class Search:
         thread.start()
 
     def beginSearch(self):
+      count = 0
       while self.threadsStillExpanding():
         while not self.fringe.isEmpty():
           threading.currentThread().expanding = True
@@ -121,6 +122,9 @@ class Search:
             path.reverse()
             threading.currentThread().print_thread.queue.push(path)
           else:
+            if count % 1000 == 0:
+              threading.currentThread().print_thread.queue.push(len(node.path))
+            count += 1
             #path = list(node.path)
             #path.reverse()
             #threading.currentThread().print_thread.queue.push(path)
@@ -170,7 +174,7 @@ class CommonStringSearchProblem:
     self.start_nodes = set(start_nodes)
     self.end_state = end_state
     self.html_charset = self.allActions()
-    print self.html_charset
+    print(self.html_charset)
 
     self.anything_else_characters = dict()
     for node in graph.nodes():
@@ -226,8 +230,8 @@ class CommonStringSearchProblem:
     actions = []
     for edge in self.graph.edges():
       if '\'"\'' in self.graph.edge_label(edge):
-        print edge
-        print self.graph.edge_label(edge)
+        print(edge)
+        print(self.graph.edge_label(edge))
       actions += self.graph.edge_label(edge).split(", ")
 
     return set(actions)
@@ -235,8 +239,9 @@ class CommonStringSearchProblem:
 if __name__ == "__main__":
   graph = HTML5Graph(populate=True)
   reachable_nodes = depth_first_search(graph, ("asciiLetters", "dataState"))[1]
-  print reachable_nodes
-  #reachable_nodes = [("script", "rawtextState")]
+  #print(reachable_nodes)
+  #reachable_nodes = [("textarea", "rcdataState"), ("title", "rcdataState")]
+  #reachable_nodes = [("asciiLetters", "attributeValueSingleQuotedState"), ("asciiLetters", "attributeValueDoubleQuotedState"), ("asciiLetters", "beforeAttributeValueState")]
   end_state = ("asciiLetters", "dataState")
   problem = CommonStringSearchProblem(graph, reachable_nodes, end_state)
   Search.breadthFirstSearch(problem)

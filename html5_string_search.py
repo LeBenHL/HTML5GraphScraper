@@ -1,6 +1,7 @@
 import threading
 import time
 
+from pygraph.algorithms.searching import depth_first_search
 from html_graph_scraper import HTML5Graph
 
 class Queue:
@@ -98,11 +99,15 @@ class HTML5StringSearch:
       self.start_state_and_char_dict[node] = char_dict
 
   def findStrings(self):
+    count = 0
     while self.threadsStillSearching():
       while self.string_queue:
         threading.currentThread().searching = True
         html5_string = self.string_queue.pop(0)
         end_state = self.end_state_from_parse(html5_string)
+        if count % 1000 == 0:
+          threading.currentThread().print_thread.queue.push(len(html5_string))
+        count += 1
         #threading.currentThread().print_thread.queue.push(threading.currentThread().name + " " + str(html5_string))
 
         if end_state and end_state == self.end_state:
@@ -128,10 +133,13 @@ class HTML5StringSearch:
 
   def parse(self, html5_string, start_state):
     current_state = start_state
-    for char in html5_string:
-      current_state = self.start_state_and_char_dict[current_state][char]
+    try:
+      for char in html5_string:
+        current_state = self.start_state_and_char_dict[current_state][char]
 
-    return current_state
+      return current_state
+    except KeyError:
+      print current_state
 
   def allChars(self):
     chars = []
@@ -147,5 +155,7 @@ class HTML5StringSearch:
     return any([thread.searching for thread in self.threads])
 
 if __name__ == "__main__":
-  searcher = HTML5StringSearch([("textarea", "rcdataState")], ("asciiLetters", "dataState"), num_threads=2)
+  graph = HTML5Graph(populate=True)
+  reachable_nodes = depth_first_search(graph, ("asciiLetters", "dataState"))[1]
+  searcher = HTML5StringSearch(reachable_nodes, ("asciiLetters", "dataState"), num_threads=4)
 
