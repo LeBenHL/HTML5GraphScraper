@@ -104,7 +104,7 @@ class HTML5StringSearch:
       while self.string_queue:
         threading.currentThread().searching = True
         html5_string = self.string_queue.pop(0)
-        end_state = self.end_state_from_parse(html5_string)
+        end_state = self.endStateFromParse(html5_string)
         if count % 1000 == 0:
           threading.currentThread().print_thread.queue.push(len(html5_string))
         count += 1
@@ -118,28 +118,29 @@ class HTML5StringSearch:
           self.string_queue.append(html5_string + [char])
       threading.currentThread().searching = False
 
-  def end_state_from_parse(self, html5_string):
-    end_state = None
-    for start_state in self.start_states:
-      if end_state:
-        if end_state != self.parse(html5_string, start_state):
-          return None
+  def endStateFromParse(self, html5_string):
+    try:
+      end_state = None
+      for start_state in self.start_states:
+        if end_state:
+          if end_state != self.parse(html5_string, start_state):
+            return None
+          else:
+            pass
         else:
-          pass
-      else:
-        end_state = self.parse(html5_string, start_state)
+          end_state = self.parse(html5_string, start_state)
 
-    return end_state
+      return end_state
+    except KeyError:
+      #If Value Error, this means that we were not able to fully parse the string some state
+      return None
 
   def parse(self, html5_string, start_state):
     current_state = start_state
-    try:
-      for char in html5_string:
-        current_state = self.start_state_and_char_dict[current_state][char]
+    for char in html5_string:
+      current_state = self.start_state_and_char_dict[current_state][char]
 
-      return current_state
-    except KeyError:
-      print current_state
+    return current_state
 
   def allChars(self):
     chars = []
@@ -157,5 +158,5 @@ class HTML5StringSearch:
 if __name__ == "__main__":
   graph = HTML5Graph(populate=True)
   reachable_nodes = depth_first_search(graph, ("asciiLetters", "dataState"))[1]
-  searcher = HTML5StringSearch(reachable_nodes, ("asciiLetters", "dataState"), num_threads=4)
+  searcher = HTML5StringSearch(reachable_nodes, ("asciiLetters", "dataState"), num_threads=2)
 
