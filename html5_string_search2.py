@@ -1,6 +1,7 @@
 from collections import namedtuple
 import threading
 import time
+import sys
 
 from pygraph.algorithms.searching import depth_first_search
 from html_graph_scraper import HTML5Graph
@@ -22,8 +23,8 @@ class Queue:
 class Search:
 
   @staticmethod
-  def breadthFirstSearch(problem):
-    return Search.MultiThreadGeneralSearch(problem, Queue(), num_threads=6);
+  def breadthFirstSearch(problem, num_threads=1):
+    return Search.MultiThreadGeneralSearch(problem, Queue(), num_threads=num_threads);
     #return Search.GeneralSearch(problem, Queue());
   
   class GeneralSearch:
@@ -98,7 +99,7 @@ class Search:
 
       #Threading Stuff
       print_thread = Search.PrintThread("PrintThread")
-      print_thread.dameon = True
+      print_thread.daemon = True
       print_thread.start()
       self.num_threads = num_threads
 
@@ -108,7 +109,7 @@ class Search:
         self.threads.append(Search.BFSThread("Thread-%d" % i, self.beginSearch, print_thread))
 
       for thread in self.threads:
-        thread.dameon = True
+        thread.daemon = True
         thread.start()
 
     def beginSearch(self):
@@ -237,12 +238,13 @@ class CommonStringSearchProblem:
     return set(actions)
 
 if __name__ == "__main__":
-  graph = HTML5Graph(populate=True)
-  reachable_nodes = depth_first_search(graph, ("asciiLetters", "dataState"))[1]
-  #print(reachable_nodes)
-  #reachable_nodes = [("textarea", "rcdataState"), ("title", "rcdataState")]
-  #reachable_nodes = [("asciiLetters", "attributeValueSingleQuotedState"), ("asciiLetters", "attributeValueDoubleQuotedState"), ("asciiLetters", "beforeAttributeValueState")]
-  end_state = ("asciiLetters", "dataState")
-  problem = CommonStringSearchProblem(graph, reachable_nodes, end_state)
-  Search.breadthFirstSearch(problem)
+  try:
+    graph = HTML5Graph(populate=True)
+    reachable_nodes = depth_first_search(graph, ("asciiLetters", "dataState"))[1]
+    end_state = ("asciiLetters", "dataState")
+    problem = CommonStringSearchProblem(graph, reachable_nodes, end_state)
+    Search.breadthFirstSearch(problem, int(sys.argv[1]))
+    while True: time.sleep(100)
+  except (KeyboardInterrupt, SystemExit):
+    print 'Quitting Script'
 

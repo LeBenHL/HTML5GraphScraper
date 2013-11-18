@@ -1,5 +1,6 @@
 import threading
 import time
+import sys
 
 from pygraph.algorithms.searching import depth_first_search
 from html_graph_scraper import HTML5Graph
@@ -64,7 +65,7 @@ class HTML5StringSearch:
 
     #Threading Stuff
     print_thread = HTML5StringSearch.PrintThread("PrintThread")
-    print_thread.dameon = True
+    print_thread.daemon = True
     print_thread.start()
     self.num_threads = num_threads
 
@@ -74,7 +75,7 @@ class HTML5StringSearch:
       self.threads.append(HTML5StringSearch.SearchThread("Thread-%d" % i, self.findStrings, print_thread))
 
     for thread in self.threads:
-      thread.dameon = True
+      thread.daemon = True
       thread.start()
 
   def populateAnythingElseCharDict(self):
@@ -156,7 +157,11 @@ class HTML5StringSearch:
     return any([thread.searching for thread in self.threads])
 
 if __name__ == "__main__":
-  graph = HTML5Graph(populate=True)
-  reachable_nodes = depth_first_search(graph, ("asciiLetters", "dataState"))[1]
-  searcher = HTML5StringSearch(reachable_nodes, ("asciiLetters", "dataState"), num_threads=2)
+  try:
+    graph = HTML5Graph(populate=True)
+    reachable_nodes = depth_first_search(graph, ("asciiLetters", "dataState"))[1]
+    searcher = HTML5StringSearch(reachable_nodes, ("asciiLetters", "dataState"), num_threads=int(sys.argv[1]))
+    while True: time.sleep(100)
+  except (KeyboardInterrupt, SystemExit):
+    print 'Quitting Script'
 
