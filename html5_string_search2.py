@@ -113,7 +113,6 @@ class Search:
         thread.start()
 
     def beginSearch(self):
-      count = 0
       while self.threadsStillExpanding():
         while not self.fringe.isEmpty():
           threading.currentThread().expanding = True
@@ -123,12 +122,6 @@ class Search:
             path.reverse()
             threading.currentThread().print_thread.queue.push(path)
           else:
-            if count % 1000 == 0:
-              threading.currentThread().print_thread.queue.push(len(node.path))
-            count += 1
-            #path = list(node.path)
-            #path.reverse()
-            #threading.currentThread().print_thread.queue.push(path)
             pass
           state_tuple = node.state
           if state_tuple not in self.closedSet:
@@ -241,6 +234,7 @@ if __name__ == "__main__":
   try:
     graph = HTML5Graph(populate=True)
     reachable_nodes = depth_first_search(graph, ("asciiLetters", "dataState"))[1]
+    #reachable_nodes = [("textarea", "rcdataState"), ("title", "rcdataState")]
     end_state = ("asciiLetters", "dataState")
     problem = CommonStringSearchProblem(graph, reachable_nodes, end_state)
     Search.breadthFirstSearch(problem, int(sys.argv[1]))

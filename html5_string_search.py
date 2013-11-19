@@ -100,20 +100,15 @@ class HTML5StringSearch:
       self.start_state_and_char_dict[node] = char_dict
 
   def findStrings(self):
-    count = 0
     while self.threadsStillSearching():
       while self.string_queue:
         threading.currentThread().searching = True
         html5_string = self.string_queue.pop(0)
         end_state = self.endStateFromParse(html5_string)
-        if count % 1000 == 0:
-          threading.currentThread().print_thread.queue.push(len(html5_string))
-        count += 1
-        #threading.currentThread().print_thread.queue.push(threading.currentThread().name + " " + str(html5_string))
 
         if end_state and end_state == self.end_state:
           threading.currentThread().print_thread.queue.push(html5_string)
-          return
+          
 
         for char in self.html5_chars:
           self.string_queue.append(html5_string + [char])
@@ -146,9 +141,6 @@ class HTML5StringSearch:
   def allChars(self):
     chars = []
     for edge in self.graph.edges():
-      #if '\'"\'' in graph.edge_label(edge):
-      #  print edge
-      #  print graph.edge_label(edge)
       chars += self.graph.edge_label(edge).split(", ")
 
     return set(chars).difference(set(["Anything Else"]))
