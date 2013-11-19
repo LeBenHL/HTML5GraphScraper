@@ -19,6 +19,8 @@ differently depending on the tag name of the token that is being parsed.
 HTML5 String Search 1
 ---------------------
 
+USAGE: python html5_string_search.py [num_threads]
+
 html5_string_search.py is a script used to find a magic string such that no matter what state the HTML tokenizer begins in, when the tokenizer parses this magic
 string, it returns back to the Data State. In this file, we only consider initializing the tokenizer at states only reachable from the Data State
 and finding a common string such that we return the tokenizer to the data state.
@@ -30,6 +32,8 @@ consolidate characters as much as possible by representing space characters and 
 
 HTML5 String Search 2
 ---------------------
+
+USAGE: python html5_string_search2.py [num_threads]
 
 This is a second method of attempting to find the magic string as described in the above section using Warren's method.
 
