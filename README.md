@@ -30,3 +30,15 @@ consolidate characters as much as possible by representing space characters and 
 
 HTML5 String Search 2
 ---------------------
+
+This is a second method of attempting to find the magic string as described in the above section using Warren's method.
+
+We find this magic string instead by analyzing the reverse graph of the HTML5 Tokenizer graph. We first initialize our search 
+by just considering the Data State node. Then we look at all nodes reachable from the graph if traversed an edge labeled with
+some character c. What this gives us is all nodes that will reach the dataState in the original graph if they traversed the edge labeled
+with character c. We continue expanding this search until we are able to find a list of edge labels such that in the reverse graph, we have touched 
+all possible nodes and thus, we have found a HTML5 String such that in the original graph, every node will end up in the Data State Node when 
+parsing and traversing that HTML5 String.
+
+This is a bit faster than method 1 as it cuts our search space quite significantly but I still don't think it's fast enough when considering
+such a huge state machine.
